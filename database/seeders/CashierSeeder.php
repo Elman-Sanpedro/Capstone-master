@@ -26,6 +26,7 @@ class CashierSeeder extends Seeder
                 'is_approved' => 1,
                 'approved_at' => now(),
                 'approved_by' => 1, // SuperAdmin ID
+                'email_verified_at' => now(),
             ],
             [
                 'username' => 'cashier2',
@@ -38,6 +39,7 @@ class CashierSeeder extends Seeder
                 'is_approved' => 1,
                 'approved_at' => now(),
                 'approved_by' => 1, // SuperAdmin ID
+                'email_verified_at' => now(),
             ],
             [
                 'username' => 'cashier3',
@@ -50,6 +52,7 @@ class CashierSeeder extends Seeder
                 'is_approved' => 1,
                 'approved_at' => now(),
                 'approved_by' => 1, // SuperAdmin ID
+                'email_verified_at' => now(),
             ],
         ];
 

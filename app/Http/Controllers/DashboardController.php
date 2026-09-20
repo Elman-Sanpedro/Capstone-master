@@ -96,8 +96,8 @@ class DashboardController extends Controller
         $stockTrends = DB::table('stock_logs')
             ->select(
                 DB::raw('DATE(transaction_date) as date'),
-                DB::raw('SUM(CASE WHEN transaction_type = "STOCK_IN" THEN quantity ELSE 0 END) as stock_in'),
-                DB::raw('SUM(CASE WHEN transaction_type = "STOCK_OUT" THEN quantity ELSE 0 END) as stock_out')
+                DB::raw("SUM(CASE WHEN transaction_type = 'STOCK_IN' THEN quantity ELSE 0 END) as stock_in"),
+                DB::raw("SUM(CASE WHEN transaction_type = 'STOCK_OUT' THEN quantity ELSE 0 END) as stock_out")
             )
             ->where('transaction_date', '>=', now()->subDays(7))
             ->groupBy('date')
@@ -467,8 +467,8 @@ class DashboardController extends Controller
                 'u.id as rider_id',
                 'u.full_name as rider_name',
                 DB::raw('COUNT(*) as assigned'),
-                DB::raw('SUM(CASE WHEN d.delivery_status = "Delivered" THEN 1 ELSE 0 END) as delivered'),
-                DB::raw('SUM(CASE WHEN d.delivery_status = "Failed" THEN 1 ELSE 0 END) as failed')
+                DB::raw("SUM(CASE WHEN d.delivery_status = 'Delivered' THEN 1 ELSE 0 END) as delivered"),
+                DB::raw("SUM(CASE WHEN d.delivery_status = 'Failed' THEN 1 ELSE 0 END) as failed")
             )
             ->whereBetween('d.assigned_date', [$dateFrom, $dateTo])
             ->groupBy('u.id', 'u.full_name')

@@ -29,6 +29,11 @@ class CreateLoggedInUserSeeder extends Seeder
                 'is_approved' => true,
                 'approved_at' => now(),
                 'approved_by' => null, // Self-approved as first admin
+                // Login refuses unverified accounts (LoginRequest::authenticate).
+                // The grandfathering migration only covered accounts that already
+                // existed when it ran, so on a brand-new database this bootstrap
+                // account must mark itself verified or nobody can ever log in.
+                'email_verified_at' => now(),
                 'contact_number' => '09772354804'
             ]
         );

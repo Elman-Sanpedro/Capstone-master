@@ -1,0 +1,24 @@
+# Rebuilt on Vercel by "composer install" and the "composer vercel" script.
+/vendor
+/node_modules
+/public/build
+/public/hot
+/public/storage
+
+# Local secrets and state: never upload these.
+.env
+.env.*
+/storage/logs
+/storage/framework
+/storage/app
+/bootstrap/cache/*.php
+/database/*.sqlite
+/backup
+
+# Not needed to build or run.
+/tests
+/.git
+/.github
+/.claude
+/.idea
+/.vscode

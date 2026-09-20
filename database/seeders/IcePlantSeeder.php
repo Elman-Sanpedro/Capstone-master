@@ -13,9 +13,20 @@ class IcePlantSeeder extends Seeder
 {
     public function run(): void
     {
-        // Get or create admin user
-        $admin = User::where('username', 'admin')->first();
-        if (!$admin) {
+        // Stock logs below need a user to be attributed to. Prefer the existing
+        // 'admin' account, then whoever already administers this install.
+        $admin = User::where('username', 'admin')->first()
+            ?? User::whereIn('role', ['SuperAdmin', 'Admin'])->orderBy('id')->first();
+
+        if (! $admin) {
+            // Only reached on a local install with no admin at all: this
+            // placeholder has a well-known password, so never create it live.
+            if (app()->isProduction()) {
+                throw new \RuntimeException(
+                    'No SuperAdmin/Admin account exists to attribute stock to. Run CreateLoggedInUserSeeder first.'
+                );
+            }
+
             $admin = User::create([
                 'username' => 'admin',
                 'full_name' => 'System Administrator',
@@ -23,6 +34,7 @@ class IcePlantSeeder extends Seeder
                 'password' => bcrypt('password'),
                 'role' => 'Admin',
                 'is_active' => 1,
+                'email_verified_at' => now(),
             ]);
         }
         

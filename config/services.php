@@ -35,6 +35,12 @@ return [
         ],
     ],
 
+    // Shared secret for the /api/cron/* endpoints Vercel Cron calls (Vercel sends
+    // it as "Authorization: Bearer <CRON_SECRET>" when CRON_SECRET is set).
+    'cron' => [
+        'secret' => env('CRON_SECRET'),
+    ],
+
     'recaptcha' => [
         // Public key, exposed to the frontend as VITE_RECAPTCHA_SITE_KEY.
         'site_key' => env('RECAPTCHA_SITE_KEY'),

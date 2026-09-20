@@ -33,11 +33,32 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Off: this would register a GET /storage/{path} route (for signed
+            // temporary URLs to the private disk, which nothing here uses) that
+            // shadows the /storage/{path} route in routes/web.php.
+            'serve' => false,
             'throw' => false,
         ],
 
-        'public' => [
+        // Uploads (payment proofs, delivery photos, report evidence, ...) go to
+        // this disk. A serverless host such as Vercel has no persistent disk, so
+        // when SUPABASE_URL is set the disk is a public Supabase Storage bucket,
+        // reached over its S3-compatible API; otherwise it is storage/app/public.
+        // Either way the app keeps linking to /storage/{path} (see routes/web.php).
+        'public' => env('SUPABASE_URL') ? [
+            'driver' => 's3',
+            'key' => env('SUPABASE_S3_KEY'),
+            'secret' => env('SUPABASE_S3_SECRET'),
+            // Must match the project's region, or request signing is rejected.
+            'region' => env('SUPABASE_S3_REGION', 'ap-southeast-1'),
+            'bucket' => env('SUPABASE_STORAGE_BUCKET', 'uploads'),
+            'endpoint' => env('SUPABASE_S3_ENDPOINT', rtrim(env('SUPABASE_URL'), '/').'/storage/v1/s3'),
+            'url' => rtrim(env('SUPABASE_URL'), '/').'/storage/v1/object/public/'.env('SUPABASE_STORAGE_BUCKET', 'uploads'),
+            'use_path_style_endpoint' => true,
+            'visibility' => 'public',
+            // Fail loudly: a silently dropped payment proof is worse than an error.
+            'throw' => true,
+        ] : [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => env('APP_URL').'/storage',
