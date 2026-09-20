@@ -63,7 +63,8 @@
         "vercel": [
             "Aws\\Script\\Composer\\Composer::removeUnusedServices",
             "npm ci --no-audit --no-fund",
-            "npm run build"
+            "npm run build",
+            "rm -rf node_modules"
         ]
     },
     "extra": {

@@ -3,12 +3,12 @@
   "framework": null,
   "installCommand": "",
   "buildCommand": "echo Nothing to build here: composer install and the composer vercel script build everything.",
+  "outputDirectory": "public",
   "regions": ["sin1"],
   "functions": {
     "api/index.php": {
       "runtime": "vercel-php@0.7.4",
-      "maxDuration": 60,
-      "excludeFiles": "{node_modules/**,tests/**,resources/js/**,resources/css/**,storage/logs/**,backup/**,.git/**,.github/**,vercel.json,.vercelignore}"
+      "maxDuration": 60
     }
   },
   "routes": [
