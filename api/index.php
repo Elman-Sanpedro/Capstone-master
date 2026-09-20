@@ -109,6 +109,38 @@ $readEnv = function (string $name) {
 
 $isSet = fn (string $name) => $readEnv($name) !== null;
 
+// Newer Vercel builds hand the project's variables to the function as a file
+// (VERCEL_ENV_FILE) rather than putting them in the process environment. The
+// Node runtime loads it; this runtime spawns PHP, so load it here when the
+// settings are otherwise absent. A file we cannot parse is left alone.
+$envFileLoaded = 'not set';
+$envFile = $readEnv('VERCEL_ENV_FILE');
+if ($envFile !== null && ! $isSet('APP_KEY')) {
+    if (! is_readable($envFile)) {
+        $envFileLoaded = 'unreadable';
+    } else {
+        $loaded = 0;
+        foreach (preg_split('/\R/', (string) file_get_contents($envFile)) as $line) {
+            if (! preg_match('/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/', $line, $m)) {
+                continue;
+            }
+
+            $value = trim($m[2]);
+            if (strlen($value) >= 2 && ($value[0] === '"' || $value[0] === "'") && $value[-1] === $value[0]) {
+                $value = substr($value, 1, -1);
+            }
+
+            putenv("{$m[1]}={$value}");
+            $_ENV[$m[1]] = $_SERVER[$m[1]] = $value;
+            $loaded++;
+        }
+
+        $envFileLoaded = $loaded > 0
+            ? "loaded {$loaded} variable(s)"
+            : 'present but no KEY=VALUE lines (encrypted?), size '.(string) filesize($envFile);
+    }
+}
+
 $missing = [];
 if (! $isSet('APP_KEY')) {
     $missing[] = 'APP_KEY';
@@ -139,9 +171,15 @@ if ($missing) {
     // Names only, and only the platform's own non-secret ones: this says
     // whether any environment at all reaches PHP, which separates "nothing was
     // set" from "what was set is not arriving".
-    $names = array_merge(array_keys(getenv()), array_keys($_SERVER), array_keys($_ENV));
-    $platform = array_values(array_unique(array_filter($names, fn ($n) => str_starts_with($n, 'VERCEL_'))));
-    sort($platform);
+    $names = array_unique(array_merge(array_keys(getenv()), array_keys($_SERVER), array_keys($_ENV)));
+
+    // Names only, never values. Anything the project set itself shows up here,
+    // which is what says whether the settings arrived under other names.
+    $ours = array_values(array_filter($names, fn ($n) => ! preg_match(
+        '/^(VERCEL_|AWS_|LAMBDA_|_|PATH$|HOME$|LANG$|LD_|PWD$|SHLVL$|TZ$|TMPDIR$|NODE_|npm_|HOSTNAME$|TERM$|PHP_|HTTP_|REQUEST_|SERVER_|REMOTE_|QUERY_|SCRIPT_|DOCUMENT_|CONTENT_|GATEWAY_|argv|argc)/',
+        $n
+    )));
+    sort($ours);
 
     echo "This deployment is not configured yet.\n\n",
         "Missing environment variables: ", implode(', ', $missing), "\n\n",
@@ -150,11 +188,14 @@ if ($missing) {
         "DB_CONNECTION is the driver name (pgsql), not a connection string; the\n",
         "database parts can be given individually or as one DB_URL instead.\n",
         "See .env.production.example and DEPLOYMENT.md in the repository.\n\n",
-        "--- diagnostics ---\n",
-        "Environment variables PHP can see: ", count(array_unique($names)), "\n",
-        "Platform variables present: ", $platform ? implode(', ', $platform) : "NONE\n"
-            ."  (none at all means the environment is not reaching PHP, which is\n"
-            ."   not something you can fix in the dashboard — report this back)", "\n";
+        "--- diagnostics (names only, no values) ---\n",
+        "VERCEL_ENV        : ", $readEnv('VERCEL_ENV') ?? '(unset)', "\n",
+        "VERCEL_TARGET_ENV : ", $readEnv('VERCEL_TARGET_ENV') ?? '(unset)', "\n",
+        "Deployed commit   : ", substr($readEnv('VERCEL_GIT_COMMIT_SHA') ?? '(unset)', 0, 7), "\n",
+        "VERCEL_ENV_FILE   : ", $envFileLoaded, "\n",
+        "Variables visible : ", count($names), "\n",
+        "Project variables : ", $ours ? implode(', ', array_slice($ours, 0, 40)) : '(none — nothing was set for this environment, or the '
+            ."deployment predates them)", "\n";
 
     return;
 }
