@@ -25,9 +25,10 @@ trait HasPOSProducts
         $products = Product::with(['category', 'inventory'])
             ->where('is_active', true)
             ->where(function ($query) use ($search) {
-                $query->where('product_name', 'like', "%{$search}%")
+                // whereLike() stays case-insensitive on PostgreSQL (ILIKE), like MySQL's LIKE.
+                $query->whereLike('product_name', "%{$search}%")
                       ->orWhereHas('category', function ($q) use ($search) {
-                          $q->where('category_name', 'like', "%{$search}%");
+                          $q->whereLike('category_name', "%{$search}%");
                       });
             })
             ->get()

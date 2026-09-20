@@ -1,4 +1,5 @@
 <?php
+use App\Support\PostgresEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -17,6 +18,11 @@ return new class extends Migration
             DB::statement("UPDATE deliveries SET delivery_status = 'Out for Delivery' WHERE delivery_status = 'In Transit'");
             // Remove the old value
             DB::statement("ALTER TABLE deliveries MODIFY delivery_status ENUM('Pending','Out for Delivery','Delivered','Failed','Cancelled') DEFAULT 'Pending'");
+        } elseif (DB::connection()->getDriverName() === 'pgsql') {
+            // The old CHECK has to go before existing rows can be renamed to the new value.
+            PostgresEnum::dropCheck('deliveries', 'delivery_status');
+            DB::statement("UPDATE deliveries SET delivery_status = 'Out for Delivery' WHERE delivery_status = 'In Transit'");
+            PostgresEnum::redefine('deliveries', 'delivery_status', ['Pending', 'Out for Delivery', 'Delivered', 'Failed', 'Cancelled'], nullable: true, default: 'Pending');
         } else {
             Schema::table('deliveries', function (Blueprint $table) {
                 $table->enum('delivery_status', ['Pending', 'Out for Delivery', 'Delivered', 'Failed', 'Cancelled'])->default('Pending')->change();
@@ -29,6 +35,10 @@ return new class extends Migration
         if (DB::connection()->getDriverName() === 'mysql') {
             DB::statement("UPDATE deliveries SET delivery_status = 'In Transit' WHERE delivery_status = 'Out for Delivery'");
             DB::statement("ALTER TABLE deliveries MODIFY delivery_status ENUM('Pending','In Transit','Delivered','Failed','Cancelled') DEFAULT 'Pending'");
+        } elseif (DB::connection()->getDriverName() === 'pgsql') {
+            PostgresEnum::dropCheck('deliveries', 'delivery_status');
+            DB::statement("UPDATE deliveries SET delivery_status = 'In Transit' WHERE delivery_status = 'Out for Delivery'");
+            PostgresEnum::redefine('deliveries', 'delivery_status', ['Pending', 'In Transit', 'Delivered', 'Failed', 'Cancelled'], nullable: true, default: 'Pending');
         } else {
             Schema::table('deliveries', function (Blueprint $table) {
                 $table->enum('delivery_status', ['Pending', 'In Transit', 'Delivered', 'Failed', 'Cancelled'])->default('Pending')->change();

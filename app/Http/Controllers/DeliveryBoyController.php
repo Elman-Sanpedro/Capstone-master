@@ -185,7 +185,7 @@ class DeliveryBoyController extends Controller
                 $evidence->file_type = 'image';
                 $evidence->original_name = basename($photoPath);
                 $evidence->file_path = $photoPath;
-                $evidence->file_size = filesize(storage_path('app/public/' . $photoPath));
+                $evidence->file_size = \Illuminate\Support\Facades\Storage::disk('public')->size($photoPath);
                 $evidence->save();
             }
         }

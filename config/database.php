@@ -94,7 +94,14 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => 'prefer',
+            // Keep DB-side timestamps (CURRENT_TIMESTAMP defaults, the on-update
+            // triggers) in the same timezone Laravel writes its own in.
+            'timezone' => env('DB_TIMEZONE', env('APP_TIMEZONE', 'UTC')),
+            // Supabase requires SSL; set DB_SSLMODE=require there.
+            // Use Supabase's *session* pooler (port 5432), not the transaction
+            // pooler (6543): that one needs emulated prepares, and with those
+            // Laravel's boolean bindings (sent as 0/1) fail against boolean columns.
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
         'sqlsrv' => [

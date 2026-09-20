@@ -22,6 +22,7 @@ class DeliveryBoySeeder extends Seeder
             'contact_number' => '09123456789',
             'role' => 'delivery_boy',
             'is_active' => true,
+            'email_verified_at' => now(),
         ]);
 
         // Create another test delivery boy
@@ -33,6 +34,7 @@ class DeliveryBoySeeder extends Seeder
             'contact_number' => '09987654321',
             'role' => 'delivery_boy',
             'is_active' => true,
+            'email_verified_at' => now(),
         ]);
 
         $this->command->info('Delivery boys created successfully!');

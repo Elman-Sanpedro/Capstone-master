@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\CustomerReportController as AdminCustomerReportController;
@@ -26,6 +27,19 @@ Route::get('/', function () {
 Route::post('/contact-us', [ContactController::class, 'send'])
     ->middleware('throttle:5,1')
     ->name('contact.send');
+
+// Uploads are linked as /storage/{path}. Locally that is the public/storage
+// symlink, which the web server answers before Laravel is reached. When the
+// "public" disk is remote (Supabase Storage on Vercel) no such file exists, so
+// send the browser to the object's public URL instead. Outside the "web"
+// middleware group: serving an image shouldn't open a session or run Inertia's
+// shared-data queries.
+Route::get('/storage/{path}', function (string $path) {
+    abort_if(config('filesystems.disks.public.driver') === 'local' || str_contains($path, '..'), 404);
+
+    return redirect()->away(Storage::disk('public')->url($path))
+        ->header('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+})->where('path', '.*')->withoutMiddleware('web')->name('storage.public');
 
 Route::middleware(['auth'])->group(function () {
     // Generic post-login landing route. Only a handful of auth scaffolding

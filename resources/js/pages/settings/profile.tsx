@@ -1,7 +1,7 @@
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Transition } from '@headlessui/react';
-import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { FormEventHandler, useState } from 'react';
 
 import DeleteUser from '@/components/delete-user';
 import HeadingSmall from '@/components/heading-small';
@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
+import { getCsrfHeaders } from '@/lib/csrf';
+import { showToast } from '@/lib/toast';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -33,15 +35,41 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
         patch(route('profile.update'));
     };
 
-    const handleBackup = () => {
-        router.post(route('profile.backup'), {}, {
-            onSuccess: () => {
-                // Backup download will be handled automatically by the server response
-            },
-            onError: (errors) => {
-                console.error('Backup failed:', errors);
+    const [backingUp, setBackingUp] = useState(false);
+
+    // A plain fetch rather than router.post: Inertia's XHR can't hand a file to
+    // the browser, and a hosted server (Vercel) has no folder to keep a copy in.
+    const handleBackup = async () => {
+        setBackingUp(true);
+
+        try {
+            const response = await fetch(route('profile.backup'), {
+                method: 'POST',
+                headers: { ...getCsrfHeaders() },
+                credentials: 'same-origin',
+            });
+
+            // A failed backup comes back as a redirect to this page, not a file.
+            const disposition = response.headers.get('Content-Disposition') ?? '';
+            if (!response.ok || !disposition.includes('attachment')) {
+                throw new Error(`Unexpected response (${response.status})`);
             }
-        });
+
+            const filename = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? 'backup.sql';
+            const url = URL.createObjectURL(await response.blob());
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            showToast('success', 'Backup downloaded.');
+        } catch (error) {
+            console.error('Backup failed:', error);
+            showToast('error', 'The backup could not be created.');
+        } finally {
+            setBackingUp(false);
+        }
     };
 
     return (
@@ -131,6 +159,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                         <div className="flex items-center gap-4">
                             <Button
                                 onClick={handleBackup}
+                                disabled={backingUp}
                                 variant="outline"
                                 className="flex items-center gap-2"
                             >
