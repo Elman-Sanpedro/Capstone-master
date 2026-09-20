@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(rm -f /c/xampp/Capstone-master/zz_screenshots/*.png)",
+      "Bash(cp /c/xampp/Capstone-master/zz_playwright_test.cjs /tmp/pw_test/test.cjs)",
+      "Read(//tmp/**)",
+      "Bash(node test.cjs)",
+      "Bash(php artisan tinker '--execute= *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"TSC_EXIT:$?\")",
+      "Bash(php artisan *)"
+    ]
+  }
+}
