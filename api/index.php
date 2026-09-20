@@ -95,7 +95,19 @@ foreach ($forced as $name => $value) {
 // There is no .env here: every setting comes from the project's environment
 // variables. Missing ones surface as a blank 500 (the logs are a tab away and
 // APP_DEBUG is off), so name them instead. Names only — never values.
-$isSet = fn (string $name) => ! in_array(getenv($name), [false, ''], true);
+// Look everywhere Laravel's env() looks: PhpDotenv reads $_SERVER and $_ENV as
+// well as getenv(), and a host does not always populate all three.
+$readEnv = function (string $name) {
+    foreach ([getenv($name), $_SERVER[$name] ?? null, $_ENV[$name] ?? null] as $value) {
+        if (is_string($value) && $value !== '') {
+            return $value;
+        }
+    }
+
+    return null;
+};
+
+$isSet = fn (string $name) => $readEnv($name) !== null;
 
 $missing = [];
 if (! $isSet('APP_KEY')) {
@@ -124,12 +136,25 @@ if ($missing) {
     http_response_code(503);
     header('Content-Type: text/plain; charset=utf-8');
     header('Cache-Control: no-store');
+    // Names only, and only the platform's own non-secret ones: this says
+    // whether any environment at all reaches PHP, which separates "nothing was
+    // set" from "what was set is not arriving".
+    $names = array_merge(array_keys(getenv()), array_keys($_SERVER), array_keys($_ENV));
+    $platform = array_values(array_unique(array_filter($names, fn ($n) => str_starts_with($n, 'VERCEL_'))));
+    sort($platform);
+
     echo "This deployment is not configured yet.\n\n",
         "Missing environment variables: ", implode(', ', $missing), "\n\n",
-        "Add them under Settings > Environment Variables (Production), then redeploy.\n",
+        "Add them under Settings > Environment Variables (Production), tick the\n",
+        "Production environment, then redeploy — variables only reach a NEW build.\n\n",
         "DB_CONNECTION is the driver name (pgsql), not a connection string; the\n",
         "database parts can be given individually or as one DB_URL instead.\n",
-        "See .env.production.example and DEPLOYMENT.md in the repository.\n";
+        "See .env.production.example and DEPLOYMENT.md in the repository.\n\n",
+        "--- diagnostics ---\n",
+        "Environment variables PHP can see: ", count(array_unique($names)), "\n",
+        "Platform variables present: ", $platform ? implode(', ', $platform) : "NONE\n"
+            ."  (none at all means the environment is not reaching PHP, which is\n"
+            ."   not something you can fix in the dashboard — report this back)", "\n";
 
     return;
 }
