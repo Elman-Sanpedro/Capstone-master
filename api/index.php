@@ -92,6 +92,33 @@ foreach ($forced as $name => $value) {
     $_ENV[$name] = $_SERVER[$name] = $value;
 }
 
+// There is no .env here: every setting comes from the project's environment
+// variables. Missing ones surface as a blank 500 (the logs are a tab away and
+// APP_DEBUG is off), so name them instead. Names only — never values.
+$missing = [];
+foreach (['APP_KEY', 'DB_CONNECTION', 'DB_HOST', 'DB_DATABASE', 'DB_USERNAME'] as $name) {
+    if (in_array(getenv($name), [false, ''], true)) {
+        $missing[] = $name;
+    }
+}
+
+// An empty password is legal elsewhere, so only a completely unset one counts.
+if (getenv('DB_PASSWORD') === false) {
+    $missing[] = 'DB_PASSWORD';
+}
+
+if ($missing) {
+    http_response_code(503);
+    header('Content-Type: text/plain; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo "This deployment is not configured yet.\n\n",
+        "Missing environment variables: ", implode(', ', $missing), "\n\n",
+        "Add them under Settings > Environment Variables (Production), then redeploy.\n",
+        "See .env.production.example and DEPLOYMENT.md in the repository.\n";
+
+    return;
+}
+
 // Laravel works out its base URL from SCRIPT_NAME. Left as /api/index.php it
 // would strip "/api" off real routes such as /api/check-username.
 $_SERVER['SCRIPT_NAME'] = '/index.php';
