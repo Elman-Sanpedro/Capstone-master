@@ -141,12 +141,19 @@ if ($envFile !== null && ! $isSet('APP_KEY')) {
     }
 }
 
+// A variable that exists with an empty value needs a different fix from one
+// that was never added, so say which it is.
+$label = function (string $name) {
+    $present = getenv($name) !== false || array_key_exists($name, $_SERVER) || array_key_exists($name, $_ENV);
+
+    return $name.($present ? ' (present but EMPTY - paste its value)' : ' (not set)');
+};
+
 $missing = [];
-if (! $isSet('APP_KEY')) {
-    $missing[] = 'APP_KEY';
-}
-if (! $isSet('DB_CONNECTION')) {
-    $missing[] = 'DB_CONNECTION';
+foreach (['APP_KEY', 'DB_CONNECTION'] as $name) {
+    if (! $isSet($name)) {
+        $missing[] = $label($name);
+    }
 }
 
 // The database is given either as one DB_URL connection string or as the
@@ -154,13 +161,13 @@ if (! $isSet('DB_CONNECTION')) {
 if (! $isSet('DB_URL')) {
     foreach (['DB_HOST', 'DB_DATABASE', 'DB_USERNAME'] as $name) {
         if (! $isSet($name)) {
-            $missing[] = $name;
+            $missing[] = $label($name);
         }
     }
 
     // An empty password is legal elsewhere, so only a completely unset one counts.
     if (getenv('DB_PASSWORD') === false) {
-        $missing[] = 'DB_PASSWORD';
+        $missing[] = 'DB_PASSWORD (not set)';
     }
 }
 
@@ -182,7 +189,11 @@ if ($missing) {
     sort($ours);
 
     echo "This deployment is not configured yet.\n\n",
-        "Missing environment variables: ", implode(', ', $missing), "\n\n",
+        "Not usable yet:
+  ", implode("
+  ", $missing), "
+
+",
         "Add them under Settings > Environment Variables (Production), tick the\n",
         "Production environment, then redeploy — variables only reach a NEW build.\n\n",
         "DB_CONNECTION is the driver name (pgsql), not a connection string; the\n",
